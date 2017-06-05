@@ -57,6 +57,7 @@ void analyze(char *fileName){
 		i=i+sizeof(float)*dlzka;
 	}
 	printf("pocet: %lf\n",n);
+	lseek(filedesc,0,SEEK_SET);
 	sequences=malloc(n*sizeof(SEQUENCE));
 	avgs=malloc(n*sizeof(float));
 	for (i=0; i<n; i++){
