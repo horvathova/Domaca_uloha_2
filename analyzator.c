@@ -1,88 +1,97 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include "stdlib.h"
+#include "stdio.h"
 #include <fcntl.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-#define MAX 200
-
-typedef struct sequnce{
-	float value;
-	float avrg;
+typedef struct _sequence{
 	unsigned char size;
-}SEQUENCE;
+	float * values;
+} SEQUENCE;
 
-float average(SEQUENCE *sequence){
+void analyze_sequence(int filedesc, SEQUENCE *sequence, int index){
+	unsigned char size;
+	int i;
+	float val;
+
+	read(filedesc, &size, 1);
+	sequence[index].size=size;
+	sequence[index].values=(float*)malloc(size * sizeof(float));
+
+	for (i=0; i<size; i++){
+		read(filedesc, &val, sizeof(val));
+		sequence[index].values[i]=val;
+	}
+}
+
+float average(SEQUENCE sequence){
 	float sum;
 	int i;
 	
 	sum=0;
-	for(i=0;i<sequence->size;i++){
-		sum=sum+sequence->value;
+	for(i=0; i<sequence.size; i++){
+		sum=sum+sequence.values[i];
 	}
 	
-	return sum/sequence->size;
+	return sum/sequence.size;
 }
 
-SEQUENCE *analyze_sequence(int filedesc){
-	float value;
-	int i,filesize;
-	unsigned char size;
-	SEQUENCE *sequence;
+void analyze(char *fileName){
+	int filedesc,i,j,filesize;
+	float sum_of_avgs, *avgs, n;
+	unsigned char dlzka;
+	SEQUENCE *sequences;
 	
-	read(filedesc, &size, 1);
-	sequence->size=size;
-	sequence->avrg=0.;
-	sequence=malloc(size*sizeof(float));
-	
-	for(i=0;i<size;i++){
-		read(filedesc, &value, sizeof(value));
-		sequence->value=value;
-		sequence->avrg=sequence->avrg+value;
-	}
-	
-	sequence->avrg=sequence->avrg/sequence->size;
-	close(filedesc);
-	return sequence;
-}
-
-void analyze(char *filename){
-	int i, filedesc, filesize, *avrgs;
-	float sum_avgs;
-	SEQUENCE *sequence, **floats;
-	
-	sum_avgs=0.;
-	filedesc=open(filename, O_RDONLY);
+	sum_of_avgs=0;
+	filedesc=open(fileName, O_RDONLY);
 	if (filedesc<0){
 		return;
 	}
 	
-	filesize=lseek(filedesc,0,SEEK_SET);
-	sequence=malloc(filesize*sizeof(sequence));
-	avrgs=malloc(filesize*sizeof(float));
-	
-	for(i=0; i<filesize;i++){
-		floats[i]=analyze_sequence(filedesc);
+	filesize=lseek(filedesc,0,SEEK_END);
+	lseek(filedesc,0,SEEK_SET);
+	for(i=0;i<filesize;i++){
+		read(filedesc,&dlzka,sizeof(unsigned char));
+		lseek(filedesc,sizeof(float)*dlzka,SEEK_CUR);
+		n++;
+		i=i+sizeof(float)*dlzka;
+	}
+	printf("pocet: %lf\n",n);
+	sequences=malloc(n*sizeof(SEQUENCE));
+	avgs=malloc(n*sizeof(float));
+	for (i=0; i<n; i++){
+		analyze_sequence(filedesc, sequences, i);
 	}
 	
-	for(i=0;i<filedesc;i++){
-		avrgs[i]=average(floats[i]);
-		sum_avgs=sum_avgs+avrgs[i];
+	for (i=0; i<n; i++){
+		avgs[i]=average(sequences[i]);
+		printf("avgs: %.2lf\n",avgs[i]);
+		sum_of_avgs=sum_of_avgs+avgs[i];
 	}
-	
-	
-	
+	printf("sum of avgs: %.2lf\n",sum_of_avgs);
+
+	printf("Priemer priemerov: %.2lf\n", sum_of_avgs / n);
+	printf("Priemery:\n");
+	for (i=0; i<n; i++){
+		printf("%.2lf\n", avgs[i]);
+	}
+
+	printf("\n");
+	for (i=0; i<n; i++){
+		SEQUENCE sequence=sequences[i];
+		for (j=0; j<sequence.size; j++){
+			printf("%.2lf ", sequence.values[j]);
+		}
+	}
+
+	close(filedesc);
 }
+
 int main(int argc, char **argv){
 	char *file;
-	int n;
 	
-	srand(time(NULL));
-	if (argc!=2){
-		printf("Zly pocet argumentov");
-		return 1;
-	}
 	file=argv[1];
-	n=atoi(argv[2]);
-	
-	analyze(file);	
+	analyze(file);
+
+	return 0;
 }
