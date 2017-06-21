@@ -6,7 +6,7 @@
 
 typedef struct _sequence{
 	unsigned char size;
-	float * values;
+	float *values;
 } SEQUENCE;
 
 void analyze_sequence(int filedesc, SEQUENCE *sequence, int index){
@@ -18,33 +18,33 @@ void analyze_sequence(int filedesc, SEQUENCE *sequence, int index){
 	sequence[index].size=size;
 	sequence[index].values=(float*)malloc(size * sizeof(float));
 
-	for (i=0; i<size; i++){
+	for(i=0; i<size; i++){
 		read(filedesc, &val, sizeof(val));
 		sequence[index].values[i]=val;
 	}
 }
 
-float average(SEQUENCE sequence){
-	float sum;
+float average(SEQUENCE *sequence){
+	float sum, val;
 	int i;
 	
 	sum=0;
-	for(i=0; i<sequence.size; i++){
-		sum=sum+sequence.values[i];
+	for(i=0; i<sequence->size; i++){
+		sum=sum+sequence->values[i];
 	}
 	
-	return sum/sequence.size;
+	return sum/sequence->size;
 }
 
 void analyze(char *fileName){
-	int filedesc,i,j,filesize;
+	int filedesc, i, j, filesize;
 	float sum_of_avgs, *avgs, n;
 	unsigned char dlzka;
 	SEQUENCE *sequences;
 	
 	sum_of_avgs=0;
 	filedesc=open(fileName, O_RDONLY);
-	if (filedesc<0){
+	if(filedesc<0){
 		return;
 	}
 	
@@ -56,35 +56,38 @@ void analyze(char *fileName){
 		n++;
 		i=i+sizeof(float)*dlzka;
 	}
+	
 	printf("pocet: %d\n",n);
 	lseek(filedesc,0,SEEK_SET);
 	sequences=malloc(n*sizeof(SEQUENCE));
 	avgs=malloc(n*sizeof(float));
-	for (i=0; i<n; i++){
+	for(i=0; i<n; i++){
 		analyze_sequence(filedesc, sequences, i);
 	}
 	
-	for (i=0; i<n; i++){
-		avgs[i]=average(sequences[i]);
+	for(i=0; i<n; i++){
+		avgs[i]=average(&sequences[i]);
 		printf("avgs: %.2lf\n",avgs[i]);
 		sum_of_avgs=sum_of_avgs+avgs[i];
 	}
-	printf("sum of avgs: %.2lf\n",sum_of_avgs);
-
-	printf("Priemer priemerov: %.2lf\n", sum_of_avgs / n);
+	
+	printf("sum of avgs: %.2lf\n", sum_of_avgs);
+	printf("Priemer priemerov: %.2lf\n", sum_of_avgs /n);
 	printf("Priemery:\n");
-	for (i=0; i<n; i++){
+	for(i=0; i<n; i++){
 		printf("%.2lf\n", avgs[i]);
 	}
 
 	printf("\n");
-	for (i=0; i<n; i++){
+	for(i=0; i<n; i++){
 		SEQUENCE sequence=sequences[i];
-		for (j=0; j<sequence.size; j++){
+		for(j=0; j<sequence.size; j++){
 			printf("%.2lf ", sequence.values[j]);
 		}
+		printf("\n");
 	}
-
+	
+	free(sequences);
 	close(filedesc);
 }
 
